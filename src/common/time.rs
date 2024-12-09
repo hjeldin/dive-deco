@@ -1,11 +1,11 @@
-use std::{
+use core::{
     cmp::Ordering,
     ops::{Add, AddAssign, Div, Mul, Sub},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Default)]
 pub struct Time {
-    s: f64,
+    s: f32,
 }
 
 impl Add for Time {
@@ -35,7 +35,7 @@ impl Mul<u8> for Time {
     type Output = Self;
     fn mul(self, rhs: u8) -> Self::Output {
         Self {
-            s: self.s * rhs as f64,
+            s: self.s * rhs as f32,
         }
     }
 }
@@ -53,19 +53,19 @@ impl PartialOrd for Time {
 }
 
 impl Time {
-    pub fn from_seconds(val: f64) -> Self {
+    pub fn from_seconds(val: f32) -> Self {
         Self { s: val }
     }
-    pub fn from_minutes(val: f64) -> Self {
+    pub fn from_minutes(val: f32) -> Self {
         Self { s: val * 60. }
     }
     pub fn zero() -> Self {
         Self { s: 0. }
     }
-    pub fn as_seconds(&self) -> f64 {
+    pub fn as_seconds(&self) -> f32 {
         self.s
     }
-    pub fn as_minutes(&self) -> f64 {
+    pub fn as_minutes(&self) -> f32 {
         self.s / 60.
     }
 }

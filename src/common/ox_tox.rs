@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use core::cmp::Ordering;
 
 use crate::common::CNS_COEFFICIENTS;
 use crate::{Pressure, RecordData};
@@ -6,9 +6,9 @@ use crate::{Pressure, RecordData};
 use super::global_types::Otu;
 use super::{CNSCoeffRow, Cns, Depth, MbarPressure};
 
-const CNS_ELIMINATION_HALF_TIME_MINUTES: f64 = 90.;
-const CNS_LIMIT_OVER_MAX_PP02_SECONDS: f64 = 400.;
-const OTU_EQUATION_EXPONENT: f64 = -0.8333;
+const CNS_ELIMINATION_HALF_TIME_MINUTES: f32 = 90.;
+const CNS_LIMIT_OVER_MAX_PP02_SECONDS: f32 = 400.;
+const OTU_EQUATION_EXPONENT: f32 = -0.8333;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct OxTox {
@@ -46,13 +46,13 @@ impl OxTox {
         // only calculate CNS change if o2 partial pressure higher than 0.5
         if let Some((.., slope, intercept)) = coeffs_for_range {
             // time limit for given P02
-            let t_lim = ((slope as f64) * pp_o2) + (intercept as f64);
+            let t_lim = ((slope as f32) * pp_o2) + (intercept as f32);
             self.cns += (time.as_seconds() / (t_lim * 60.)) * 100.;
         } else {
             // PO2 out of cns table range
             if (depth == Depth::zero()) && (pp_o2 <= 0.5) {
                 // eliminate CNS with half time
-                self.cns /= 2_f64.powf(time.as_minutes() / (CNS_ELIMINATION_HALF_TIME_MINUTES));
+                self.cns /= libm::powf(2.0, time.as_minutes() / (CNS_ELIMINATION_HALF_TIME_MINUTES));
             } else if pp_o2 > 1.6 {
                 // increase CNS by a constant when ppO2 higher than 1.6
                 self.cns += (time.as_seconds() / CNS_LIMIT_OVER_MAX_PP02_SECONDS) * 100.;
@@ -67,7 +67,7 @@ impl OxTox {
         let otu_delta = match pp_o2.total_cmp(&0.5) {
             Ordering::Less => 0.,
             Ordering::Equal | Ordering::Greater => {
-                time.as_minutes() * (0.5 / (pp_o2 - 0.5)).powf(OTU_EQUATION_EXPONENT)
+                time.as_minutes() * libm::powf((0.5 / (pp_o2 - 0.5)), OTU_EQUATION_EXPONENT)
             }
         };
         self.otu += otu_delta;
@@ -143,7 +143,7 @@ mod tests {
         };
 
         ox_tox.recalculate_cns(&record, 1013);
-        assert_eq!(ox_tox.cns(), 15.018262206843517);
+        assert_eq!(ox_tox.cns(), 15.018265);
     }
 
     #[test]

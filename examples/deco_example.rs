@@ -9,7 +9,10 @@ fn main() {
     // deco gases
     let ean_50 = Gas::new(0.5, 0.);
     let oxygen = Gas::new(1., 0.);
-    let available_gas_mixes = vec![air, ean_50, oxygen];
+    let mut available_gas_mixes = [Gas::default(); 16];
+    available_gas_mixes[0] = air;
+    available_gas_mixes[1] = ean_50;
+    available_gas_mixes[2] = oxygen;
 
     let bottom_depth = Depth::from_meters(40.);
     let bottom_time = Time::from_minutes(20.);

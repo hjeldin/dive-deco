@@ -2,20 +2,20 @@ use crate::buehlmann::buehlmann_config::BuehlmannConfig;
 use crate::buehlmann::compartment::{Compartment, Supersaturation};
 use crate::buehlmann::zhl_values::{ZHLParams, ZHL_16C_N2_16A_HE_VALUES};
 use crate::common::{
-    AscentRatePerMinute, Cns, ConfigValidationErr, Deco, DecoModel, DecoModelConfig, Depth,
+    AscentRatePerMinute, Cns, ConfigValidationErr, ConfigValidationErrorReason, ConfigValidationErrorField, Deco, DecoModel, DecoModelConfig, Depth,
     DiveState, Gas, GradientFactor, OxTox, RecordData,
 };
 use crate::{CeilingType, DecoCalculationError, DecoRuntime, GradientFactors, Sim, Time};
-use std::cmp::Ordering;
+use core::cmp::Ordering;
 
 const NDL_CUT_OFF_MINS: u8 = 99;
 
 #[derive(Clone, Debug)]
 pub struct BuehlmannModel {
-    config: BuehlmannConfig,
-    compartments: Vec<Compartment>,
-    state: BuehlmannState,
-    sim: bool,
+    pub config: BuehlmannConfig,
+    pub compartments: [Compartment; 16],
+    pub state: BuehlmannState,
+    pub sim: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -51,13 +51,13 @@ impl DecoModel for BuehlmannModel {
     fn new(config: BuehlmannConfig) -> Self {
         // validate config
         if let Err(e) = config.validate() {
-            panic!("Config error [{}]: {}", e.field, e.reason);
+            panic!("Config error [{:?}]: {:?}", e.field, e.reason);
         }
         // air as a default init gas
         let initial_model_state = BuehlmannState::default();
         let mut model = Self {
             config,
-            compartments: vec![],
+            compartments: [Compartment::default(); 16],
             state: initial_model_state,
             sim: false,
         };
@@ -109,8 +109,10 @@ impl DecoModel for BuehlmannModel {
         rate: AscentRatePerMinute,
         gas: &Gas,
     ) {
-        self.validate_depth(target_depth);
-        let distance = (target_depth - self.state.depth).as_meters().abs();
+        let mut distance = (target_depth - self.state.depth).as_meters();
+        if(distance < 0.) {
+            distance = -distance;
+        }
         self.record_travel(target_depth, Time::from_seconds(distance / rate * 60.), gas);
     }
 
@@ -177,13 +179,13 @@ impl DecoModel for BuehlmannModel {
         };
 
         if self.config().round_ceiling() {
-            ceiling = Depth::from_meters(ceiling.as_meters().ceil());
+            ceiling = Depth::from_meters(libm::ceil(ceiling.as_meters() as f64) as f32);
         }
 
         ceiling
     }
 
-    fn deco(&self, gas_mixes: Vec<Gas>) -> Result<DecoRuntime, DecoCalculationError> {
+    fn deco(&self, gas_mixes: [Gas; crate::common::MAX_GASSES]) -> Result<DecoRuntime, DecoCalculationError> {
         let mut deco = Deco::default();
         deco.calc(self.fork(), gas_mixes)
     }
@@ -251,7 +253,7 @@ impl BuehlmannModel {
         }
     }
 
-    pub fn tissues(&self) -> Vec<Compartment> {
+    pub fn tissues(&self) -> [Compartment; 16] {
         self.compartments.clone()
     }
 
@@ -290,10 +292,10 @@ impl BuehlmannModel {
     }
 
     fn create_compartments(&mut self, zhl_values: [ZHLParams; 16], config: BuehlmannConfig) {
-        let mut compartments: Vec<Compartment> = vec![];
+        let mut compartments: [Compartment; 16] = [Compartment::default(); 16];
         for (i, comp_values) in zhl_values.into_iter().enumerate() {
             let compartment = Compartment::new(i as u8 + 1, comp_values, config);
-            compartments.push(compartment);
+            compartments[i] = compartment;
         }
         self.compartments = compartments;
     }
@@ -403,8 +405,8 @@ impl BuehlmannModel {
         depth: Depth,
     ) -> GradientFactor {
         let (gf_low, gf_high) = gf;
-        let slope_point: f64 = gf_high as f64
-            - (((gf_high - gf_low) as f64) / gf_low_depth.as_meters()) * depth.as_meters();
+        let slope_point: f32 = gf_high as f32
+            - (((gf_high - gf_low) as f32) / gf_low_depth.as_meters()) * depth.as_meters();
 
         slope_point as u8
     }
@@ -418,6 +420,8 @@ impl BuehlmannModel {
 
 #[cfg(test)]
 mod tests {
+    // use alloc::string::ToString;
+
     use super::*;
 
     #[test]
@@ -489,13 +493,21 @@ mod tests {
 
     #[test]
     fn test_initial_supersaturation() {
-        fn extract_supersaturations(model: BuehlmannModel) -> Vec<Supersaturation> {
-            model
-                .compartments
-                .clone()
-                .into_iter()
-                .map(|comp| comp.supersaturation(model.config().surface_pressure, Depth::zero()))
-                .collect::<Vec<Supersaturation>>()
+        // fn extract_supersaturations(model: BuehlmannModel) -> [Supersaturation; 16] {
+        //     model
+        //         .compartments
+        //         .clone()
+        //         .into_iter()
+        //         .map(|comp| comp.supersaturation(model.config().surface_pressure, Depth::zero()))
+        //         .collect::<[Supersaturation; 16]>()
+        // }
+        fn extract_supersaturations(model: BuehlmannModel) -> [Supersaturation; 16] {
+            let mut supersaturations: [Supersaturation; 16] = [Supersaturation::default(); 16];
+            for (i, comp) in model.compartments.iter().enumerate() {
+                supersaturations[i] = comp.supersaturation(model.config().surface_pressure, Depth::zero());
+            }
+
+            return supersaturations;
         }
 
         let model_initial = BuehlmannModel::default();
@@ -529,8 +541,8 @@ mod tests {
         assert_eq!(
             update_res,
             Err(ConfigValidationErr {
-                field: "gf".to_string(),
-                reason: "GF values have to be in 1-100 range".to_string(),
+                field: ConfigValidationErrorField::GradientFactors,
+                reason: ConfigValidationErrorReason::GF_RANGE_ERR_MSG,
             }),
             "invalid config update results in Err"
         );

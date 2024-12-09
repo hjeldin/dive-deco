@@ -1,11 +1,11 @@
-pub type Pressure = f64;
-pub type DepthType = f64;
+pub type Pressure = f32;
+pub type DepthType = f32;
 pub type GradientFactor = u8;
 pub type GradientFactors = (u8, u8);
 pub type MbarPressure = u16;
-pub type AscentRatePerMinute = f64;
-pub type Cns = f64;
-pub type Otu = f64;
+pub type AscentRatePerMinute = f32;
+pub type Cns = f32;
+pub type Otu = f32;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum NDLType {

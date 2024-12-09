@@ -1,14 +1,9 @@
 use crate::{
     common::{
-        AscentRatePerMinute, ConfigValidationErr, DecoModelConfig, GradientFactors, MbarPressure,
+        AscentRatePerMinute, ConfigValidationErr, ConfigValidationErrorReason, ConfigValidationErrorField, DecoModelConfig, GradientFactors, MbarPressure,
     },
     CeilingType,
 };
-
-const GF_RANGE_ERR_MSG: &str = "GF values have to be in 1-100 range";
-const GF_ORDER_ERR_MSG: &str = "GFLow can't be higher than GFHigh";
-const SURFACE_PRESSURE_ERR_MSG: &str = "Surface pressure must be in milibars in 500-1500 range";
-const DECO_ASCENT_RATE_ERR_MSG: &str = "Ascent rate must in 1-30 m/s range";
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct BuehlmannConfig {
@@ -108,11 +103,11 @@ impl BuehlmannConfig {
         let gf_range = 1..=100;
 
         if !gf_range.contains(gf_low) || !gf_range.contains(gf_high) {
-            return Err(ConfigValidationErr::new("gf", GF_RANGE_ERR_MSG));
+            return Err(ConfigValidationErr::new(ConfigValidationErrorField::GradientFactors, ConfigValidationErrorReason::GF_RANGE_ERR_MSG));
         }
 
         if gf_low > gf_high {
-            return Err(ConfigValidationErr::new("gf", GF_ORDER_ERR_MSG));
+            return Err(ConfigValidationErr::new(ConfigValidationErrorField::GradientFactors, ConfigValidationErrorReason::GF_ORDER_ERR_MSG));
         }
 
         Ok(())
@@ -125,8 +120,8 @@ impl BuehlmannConfig {
         let mbar_pressure_range = 500..=1500;
         if !mbar_pressure_range.contains(surface_pressure) {
             return Err(ConfigValidationErr::new(
-                "surface_pressure",
-                SURFACE_PRESSURE_ERR_MSG,
+                ConfigValidationErrorField::SurfacePressure,
+                ConfigValidationErrorReason::SURFACE_PRESSURE_ERR_MSG,
             ));
         }
 
@@ -140,8 +135,8 @@ impl BuehlmannConfig {
         let ascent_rate_range = 1.0..=30.0;
         if !ascent_rate_range.contains(deco_ascent_rate) {
             return Err(ConfigValidationErr::new(
-                "deco_ascent_rate",
-                DECO_ASCENT_RATE_ERR_MSG,
+                ConfigValidationErrorField::DecoAscentRate,
+                ConfigValidationErrorReason::DECO_ASCENT_RATE_ERR_MSG,
             ));
         }
 
@@ -172,13 +167,13 @@ mod tests {
 
     #[test]
     fn test_gf_range() {
-        let invalid_gf_range_cases = vec![(1, 101), (0, 99), (120, 240)];
+        let invalid_gf_range_cases = [(1, 101), (0, 99), (120, 240)];
         for case in invalid_gf_range_cases {
             let (gf_low, gf_high) = case;
             let config = BuehlmannConfig::new().with_gradient_factors(gf_low, gf_high);
             assert_eq!(
                 config.validate(),
-                Err(ConfigValidationErr::new("gf", GF_RANGE_ERR_MSG))
+                Err(ConfigValidationErr::new(ConfigValidationErrorField::GradientFactors, ConfigValidationErrorReason::GF_RANGE_ERR_MSG))
             );
         }
     }
@@ -188,7 +183,7 @@ mod tests {
         let config = BuehlmannConfig::new().with_gradient_factors(90, 80);
         assert_eq!(
             config.validate(),
-            Err(ConfigValidationErr::new("gf", GF_ORDER_ERR_MSG))
+            Err(ConfigValidationErr::new(ConfigValidationErrorField::GradientFactors, ConfigValidationErrorReason::GF_ORDER_ERR_MSG))
         );
     }
 
@@ -201,14 +196,14 @@ mod tests {
 
     #[test]
     fn test_invalid_surface_pressure_values() {
-        let invalid_surface_pressure_cases = vec![0, 100, 2000];
+        let invalid_surface_pressure_cases = [0, 100, 2000];
         for invalid_case in invalid_surface_pressure_cases {
             let config = BuehlmannConfig::new().with_surface_pressure(invalid_case);
             assert_eq!(
                 config.validate(),
                 Err(ConfigValidationErr::new(
-                    "surface_pressure",
-                    SURFACE_PRESSURE_ERR_MSG
+                    ConfigValidationErrorField::SurfacePressure,
+                    ConfigValidationErrorReason::SURFACE_PRESSURE_ERR_MSG
                 ))
             );
         }
@@ -223,14 +218,14 @@ mod tests {
 
     #[test]
     fn test_invalid_deco_ascent_rate_values() {
-        let invalid_deco_ascent_rate_cases = vec![-3., 0.5, 31.0, 50.5];
+        let invalid_deco_ascent_rate_cases = [-3., 0.5, 31.0, 50.5];
         for invalid_case in invalid_deco_ascent_rate_cases {
             let config = BuehlmannConfig::new().with_deco_ascent_rate(invalid_case);
             assert_eq!(
                 config.validate(),
                 Err(ConfigValidationErr::new(
-                    "deco_ascent_rate",
-                    DECO_ASCENT_RATE_ERR_MSG
+                    ConfigValidationErrorField::DecoAscentRate,
+                    ConfigValidationErrorReason::DECO_ASCENT_RATE_ERR_MSG
                 ))
             );
         }

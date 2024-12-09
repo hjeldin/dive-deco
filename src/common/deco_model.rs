@@ -5,17 +5,33 @@ use crate::common::{AscentRatePerMinute, Cns, Gas, Otu};
 use crate::common::{Depth, Time};
 
 #[derive(Debug, PartialEq)]
+pub enum ConfigValidationErrorField {
+    SurfacePressure,
+    DecoAscentRate,
+    CeilingType,
+    RoundCeiling,
+    GradientFactors,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum ConfigValidationErrorReason {
+    InvalidValue,
+    OutOfRange,
+    GF_RANGE_ERR_MSG, //= "GF values have to be in 1-100 range",
+    GF_ORDER_ERR_MSG, //= "GFLow can't be higher than GFHigh",
+    SURFACE_PRESSURE_ERR_MSG, //= "Surface pressure must be in milibars in 500-1500 range",
+    DECO_ASCENT_RATE_ERR_MSG, //= "Ascent rate must in 1-30 m/s range",
+}
+
+#[derive(Debug, PartialEq)]
 pub struct ConfigValidationErr {
-    pub field: String,
-    pub reason: String,
+    pub field: ConfigValidationErrorField,
+    pub reason: ConfigValidationErrorReason,
 }
 
 impl ConfigValidationErr {
-    pub fn new(field: &str, reason: &str) -> Self {
-        Self {
-            field: field.to_string(),
-            reason: reason.to_string(),
-        }
+    pub fn new(field: ConfigValidationErrorField, reason: ConfigValidationErrorReason) -> Self {
+        Self { field, reason }
     }
 }
 
@@ -71,7 +87,10 @@ pub trait DecoModel {
     fn ceiling(&self) -> Depth;
 
     /// deco stages, TTL
-    fn deco(&self, gas_mixes: Vec<Gas>) -> Result<DecoRuntime, DecoCalculationError>;
+    fn deco(
+        &self,
+        gas_mixes: [Gas; super::MAX_GASSES],
+    ) -> Result<DecoRuntime, DecoCalculationError>;
 
     /// central nervous system oxygen toxicity
     fn cns(&self) -> Cns;
@@ -86,7 +105,7 @@ pub trait DecoModel {
             CeilingType::Actual => self.ceiling() > Depth::zero(),
             CeilingType::Adaptive => {
                 let current_gas = self.dive_state().gas;
-                let runtime = self.deco(vec![current_gas]).unwrap();
+                let runtime = self.deco([current_gas; 16]).unwrap();
                 let deco_stages = runtime.deco_stages;
                 deco_stages.len() > 1
             }

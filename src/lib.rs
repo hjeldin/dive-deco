@@ -1,3 +1,4 @@
+#![no_std]
 mod buehlmann;
 mod common;
 

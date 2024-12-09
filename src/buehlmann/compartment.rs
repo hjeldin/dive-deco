@@ -25,13 +25,38 @@ pub struct Compartment {
     // compartment'a Buehlmann params (N2 half time, n2 'a' coefficient, n2 'b' coefficient, He half time, ..)
     pub params: ZHLParams,
     // Buehlmann model config (gradient factors, surface pressure)
-    model_config: BuehlmannConfig,
+    pub model_config: BuehlmannConfig,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+impl Default for Compartment {
+    fn default() -> Self {
+        Self {
+            no: 0,
+            min_tolerable_amb_pressure: 0.,
+            he_ip: 0.,
+            n2_ip: 0.,
+            total_ip: 0.,
+            m_value_raw: 0.,
+            m_value_calc: 0.,
+            params: (0., 0., 0., 0., 0., 0.),
+            model_config: BuehlmannConfig::default(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Supersaturation {
-    pub gf_99: f64,
-    pub gf_surf: f64,
+    pub gf_99: f32,
+    pub gf_surf: f32,
+}
+
+impl Default for Supersaturation {
+    fn default() -> Self {
+        Self {
+            gf_99: 0.,
+            gf_surf: 0.,
+        }
+    }
 }
 
 impl Compartment {
@@ -88,7 +113,7 @@ impl Compartment {
     // tissue ceiling as depth
     pub fn ceiling(&self) -> Depth {
         let mut ceil = (self.min_tolerable_amb_pressure
-            - (self.model_config.surface_pressure as f64 / 1000.))
+            - (self.model_config.surface_pressure as f32 / 1000.))
             * 10.;
         // cap ceiling at 0 if min tolerable leading compartment pressure depth equivalent negative
         if ceil < 0. {
@@ -100,7 +125,7 @@ impl Compartment {
 
     // tissue supersaturation (gf99, surface gf)
     pub fn supersaturation(&self, surface_pressure: MbarPressure, depth: Depth) -> Supersaturation {
-        let p_surf = (surface_pressure as f64) / 1000.;
+        let p_surf = (surface_pressure as f32) / 1000.;
         let p_amb = p_surf + (depth.as_meters() / 10.);
         let m_value = self.m_value_raw;
         let m_value_surf = self.m_value(Depth::zero(), surface_pressure, 100);
@@ -119,7 +144,7 @@ impl Compartment {
         let weighted_zhl_params = self.weighted_zhl_params(self.he_ip, self.n2_ip);
         let (_, a_coeff_adjusted, b_coeff_adjusted) =
             self.max_gf_adjusted_zhl_params(weighted_zhl_params, max_gf);
-        let p_surf = (surface_pressure as f64) / 1000.;
+        let p_surf = (surface_pressure as f32) / 1000.;
         let p_amb = p_surf + (depth.as_meters() / 10.);
 
         a_coeff_adjusted + (p_amb / b_coeff_adjusted)
@@ -179,7 +204,7 @@ impl Compartment {
         };
 
         // (Pi - Po)(1 - e^(-0.693t/half-time))
-        (gas_inspired_p - inert_gas_load) * (1. - (2_f64.powf(-(time.as_minutes()) / half_time)))
+        (gas_inspired_p - inert_gas_load) * (1. - (libm::powf(2.0, -(time.as_minutes()) / half_time)))
     }
 
     // tissue tolerable ambient pressure using GF slope, weighted Buehlmann ZHL params based on tissue inert gasses saturation proportions
@@ -221,7 +246,7 @@ impl Compartment {
         max_gf: GradientFactor,
     ) -> (ZHLParam, ZHLParam, ZHLParam) {
         let (half_time, a_coeff, b_coeff) = params;
-        let max_gf_fraction = max_gf as f64 / 100.;
+        let max_gf_fraction = max_gf as f32 / 100.;
         let a_coefficient_adjusted = a_coeff * max_gf_fraction;
         let b_coefficient_adjusted =
             b_coeff / (max_gf_fraction - (max_gf_fraction * b_coeff) + b_coeff);
@@ -252,7 +277,7 @@ mod tests {
             comp,
             Compartment {
                 no: 1,
-                min_tolerable_amb_pressure: -0.257127315,
+                min_tolerable_amb_pressure: -0.25712729,
                 he_ip: 0.0,
                 n2_ip: 0.750737,
                 total_ip: 0.750737,
@@ -316,7 +341,7 @@ mod tests {
         let weighted_params = comp.weighted_zhl_params(0.5, 1. - (0.18 + 0.5));
         assert_eq!(
             weighted_params,
-            (2.481707317073171, 1.5541073170731705, 0.4559146341463414)
+            (2.481707, 1.5541074, 0.45591462)
         );
     }
 
@@ -331,6 +356,6 @@ mod tests {
         };
         comp.recalculate(&recprd, 100, 100);
         let min_tolerable_pressure = comp.min_tolerable_amb_pressure;
-        assert_eq!(min_tolerable_pressure, 0.40957969932131577);
+        assert_eq!(min_tolerable_pressure, 0.40957972);
     }
 }

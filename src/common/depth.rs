@@ -1,5 +1,5 @@
 use core::fmt;
-use std::ops::{Add, AddAssign, Div, Mul, Sub};
+use core::ops::{Add, AddAssign, Div, Mul, Sub};
 
 use super::DepthType;
 
@@ -9,7 +9,7 @@ pub enum Units {
     Imperial,
 }
 
-pub trait Unit<T = f64>: Sized {
+pub trait Unit<T = f32>: Sized {
     fn from_units(val: T, units: Units) -> Self;
     fn to_units(&self, units: Units) -> T;
     fn base_unit(&self) -> T;
@@ -27,7 +27,7 @@ impl Default for Depth {
 }
 
 impl fmt::Display for Depth {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, r"{}m \ {}ft", self.as_meters(), self.as_feet())
     }
 }
@@ -39,7 +39,7 @@ impl PartialEq<Self> for Depth {
 }
 
 impl PartialOrd<Self> for Depth {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         self.m.partial_cmp(&other.m)
     }
 }
@@ -68,10 +68,10 @@ impl Mul<Self> for Depth {
     }
 }
 
-impl Mul<f64> for Depth {
+impl Mul<f32> for Depth {
     type Output = Self;
 
-    fn mul(self, rhs: f64) -> Self::Output {
+    fn mul(self, rhs: f32) -> Self::Output {
         Self { m: self.m * rhs }
     }
 }
@@ -84,10 +84,10 @@ impl Div<Self> for Depth {
     }
 }
 
-impl Div<f64> for Depth {
+impl Div<f32> for Depth {
     type Output = Self;
 
-    fn div(self, rhs: f64) -> Self::Output {
+    fn div(self, rhs: f32) -> Self::Output {
         Self { m: self.m / rhs }
     }
 }
@@ -111,7 +111,7 @@ impl Unit for Depth {
             Units::Imperial => self.as_feet(),
         }
     }
-    fn base_unit(&self) -> f64 {
+    fn base_unit(&self) -> f32 {
         self.m
     }
 }
@@ -180,8 +180,8 @@ mod tests {
         assert_eq!(depth_ft.as_meters(), 0.3048);
     }
 
-    fn with_precision(x: f64, precision: u32) -> f64 {
-        let d = 10_u32.pow(precision) as f64;
+    fn with_precision(x: f32, precision: u32) -> f32 {
+        let d = 10_u32.pow(precision) as f32;
         (x * d).round() / d
     }
 }

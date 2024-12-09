@@ -3,6 +3,28 @@ use dive_deco::{
 };
 pub mod fixtures;
 
+const MAX_GASSES: usize = 16;
+fn build_gasses(gas: Gas) -> [Gas; MAX_GASSES] {
+    let mut gasses = [Gas::default(); MAX_GASSES];
+    gasses[0] = gas;
+    gasses
+}
+
+fn build_2gasses(gas: Gas, gas2: Gas) -> [Gas; MAX_GASSES] {
+    let mut gasses = [Gas::default(); MAX_GASSES];
+    gasses[0] = gas;
+    gasses[1] = gas2;
+    gasses
+}
+
+fn build_3gasses(gas: Gas, gas2: Gas, gas3: Gas) -> [Gas; MAX_GASSES] {
+    let mut gasses = [Gas::default(); MAX_GASSES];
+    gasses[0] = gas;
+    gasses[1] = gas2;
+    gasses[2] = gas3;
+    gasses
+}
+
 // general high-level model tests
 #[test]
 #[should_panic]
@@ -253,7 +275,7 @@ fn test_gradual_ascent_with_deco() {
             break;
         }
         model.record_travel_with_rate(depth - Depth::from_meters(3.), 10., &air);
-        model.deco(vec![air, ean_50]).unwrap();
+        model.deco(build_2gasses(air, ean_50)).unwrap();
     }
 }
 

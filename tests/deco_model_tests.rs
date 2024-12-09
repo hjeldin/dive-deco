@@ -13,7 +13,7 @@ fn test_cns() {
 
     let cns = model.cns();
 
-    assert_close_to_abs!(cns as f64, 12., 1.);
+    assert_close_to_abs!(cns as f32, 12., 1.);
 }
 
 #[test]

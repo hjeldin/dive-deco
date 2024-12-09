@@ -1,7 +1,7 @@
-use std::ops::RangeInclusive;
+use core::ops::RangeInclusive;
 
 // (PO2 Range, slope, intercept)
-pub type CNSCoeffRow = (RangeInclusive<f64>, i32, i32);
+pub type CNSCoeffRow = (RangeInclusive<f32>, i32, i32);
 
 pub const CNS_COEFFICIENTS: [CNSCoeffRow; 7] = [
     (0.5..=0.6, -1800, 1800),

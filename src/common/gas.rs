@@ -3,13 +3,31 @@ use crate::common::global_types::{MbarPressure, Pressure};
 use super::Depth;
 
 // alveolar water vapor pressure assuming 47 mm Hg at 37C (Buehlmann's value)
-const ALVEOLI_WATER_VAPOR_PRESSURE: f64 = 0.0627;
+const ALVEOLI_WATER_VAPOR_PRESSURE: f32 = 0.0627;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Gas {
     o2_pp: Pressure,
     n2_pp: Pressure,
     he_pp: Pressure,
+    valid: bool,
+}
+
+impl Default for Gas {
+    fn default() -> Self {
+        Self {
+            o2_pp: 0.,
+            n2_pp: 0.,
+            he_pp: 0.,
+            valid: false,
+        }
+    }
+}
+
+impl Gas {
+    pub fn is_valid(&self) -> bool {
+        self.valid
+    }
 }
 
 #[derive(Debug, PartialEq, PartialOrd)]
@@ -24,8 +42,8 @@ pub enum InertGas {
     Nitrogen,
 }
 
-impl std::fmt::Display for Gas {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for Gas {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{:.0}/{:.0}", self.o2_pp * 100., self.he_pp * 100.)
     }
 }
@@ -46,12 +64,13 @@ impl Gas {
         Self {
             o2_pp,
             he_pp,
-            n2_pp: ((1. - (o2_pp + he_pp)) * 100.0).round() / 100.0,
+            n2_pp: ((1. - (o2_pp + he_pp)) * 100.0) / 100.0,
+            valid: true,
         }
     }
 
-    pub fn id(&self) -> String {
-        self.to_string()
+    pub fn id(&self) -> (f32, f32) {
+        (self.o2_pp, self.he_pp)
     }
 
     /// gas partial pressures
@@ -60,7 +79,7 @@ impl Gas {
         depth: Depth,
         surface_pressure: MbarPressure,
     ) -> PartialPressures {
-        let gas_pressure = (surface_pressure as f64 / 1000.) + (depth.as_meters() / 10.);
+        let gas_pressure = (surface_pressure as f32 / 1000.) + (depth.as_meters() / 10.);
         self.gas_pressures_compound(gas_pressure)
     }
 
@@ -70,12 +89,12 @@ impl Gas {
         depth: Depth,
         surface_pressure: MbarPressure,
     ) -> PartialPressures {
-        let gas_pressure = ((surface_pressure as f64 / 1000.) + (depth.as_meters() / 10.))
+        let gas_pressure = ((surface_pressure as f32 / 1000.) + (depth.as_meters() / 10.))
             - ALVEOLI_WATER_VAPOR_PRESSURE;
         self.gas_pressures_compound(gas_pressure)
     }
 
-    pub fn gas_pressures_compound(&self, gas_pressure: f64) -> PartialPressures {
+    pub fn gas_pressures_compound(&self, gas_pressure: f32) -> PartialPressures {
         PartialPressures {
             o2: self.o2_pp * gas_pressure,
             n2: self.n2_pp * gas_pressure,
@@ -193,7 +212,7 @@ mod tests {
             (0.21, 0., 1.4, 56.66666666666666),
             (0.50, 0., 1.6, 22.),
             (0.21, 0.35, 1.4, 56.66666666666666),
-            (0., 0., 1.4, f64::INFINITY),
+            (0., 0., 1.4, f32::INFINITY),
         ];
         for (pp_o2, pe_he, max_pp_o2, expected_mod) in test_cases {
             let gas = Gas::new(pp_o2, pe_he);
@@ -220,8 +239,8 @@ mod tests {
     #[test]
     fn test_id() {
         let ean32 = Gas::new(0.32, 0.);
-        assert_eq!(ean32.id(), "32/0");
+        assert_eq!(ean32.id(), (0.32, 0.));
         let tmx2135 = Gas::new(0.21, 0.35);
-        assert_eq!(tmx2135.id(), "21/35");
+        assert_eq!(tmx2135.id(), (0.21, 0.35));
     }
 }

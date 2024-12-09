@@ -9,9 +9,12 @@ mod record;
 mod sim;
 mod time;
 
+pub const MAX_GASSES : usize = 16;
+pub const MAX_DECO_STAGE: usize = 16;
+
 pub use cns_table::{CNSCoeffRow, CNS_COEFFICIENTS};
 pub use deco::{Deco, DecoCalculationError, DecoRuntime, DecoStage, DecoStageType};
-pub use deco_model::{ConfigValidationErr, DecoModel, DecoModelConfig, DiveState};
+pub use deco_model::{ConfigValidationErr, DecoModel, DecoModelConfig, DiveState, ConfigValidationErrorField, ConfigValidationErrorReason};
 pub use depth::{Depth, Unit, Units};
 pub use time::Time;
 

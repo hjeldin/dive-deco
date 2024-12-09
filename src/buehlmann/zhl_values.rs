@@ -1,4 +1,4 @@
-pub type ZHLParam = f64;
+pub type ZHLParam = f32;
 // N2 half-time, N2 a coefficient, N2 b coefficient, He half-time, He a coefficient, H2 b coefficient
 pub type ZHLParams = (ZHLParam, ZHLParam, ZHLParam, ZHLParam, ZHLParam, ZHLParam);
 

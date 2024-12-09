@@ -91,10 +91,10 @@ println!("{:?}", model.config()); // BuehlmannConfig { gf: (30, 70) }
 
 A VO representing depth, both constructed from and represented as meters or feet.
 
-- `from_meters(val: f64) -> Depth`
-- `from_feet(val: f64) -> Depth`
-- `as_meters() -> f64`
-- `as_feet() -> f64`
+- `from_meters(val: f32) -> Depth`
+- `from_feet(val: f32) -> Depth`
+- `as_meters() -> f32`
+- `as_feet() -> f32`
 
 ```rust
 let depth_1 = Depth::from_meters(10.);
@@ -409,8 +409,8 @@ println!("Ceiling: {},", model.ceiling()); // Ceiling: 3.004(..)m
 Current tissue oversaturation as gradient factors.
 
 - `supersaturation() -> Supersaturation { gf_99, gf_surf }` - supersaturation in % relative to M-value ()
-  - gf_99 (f64) - GF99, current oversaturation relative to ambient pressure
-  - gf_surf (f64) - Surface GF, current oversaturation relative to surface pressure
+  - gf_99 (f32) - GF99, current oversaturation relative to ambient pressure
+  - gf_surf (f32) - Surface GF, current oversaturation relative to surface pressure
 
 ```rust
 // given model state after 120 seconds at 40 meters breathing air
